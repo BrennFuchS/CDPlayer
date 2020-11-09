@@ -1,0 +1,4 @@
+C:\Users\pross\source\repos\CDPlayer\CDPlayer\bin\Release\CDPlayer.dll
+C:\Users\pross\source\repos\CDPlayer\CDPlayer\obj\Release\CDPlayer.csprojAssemblyReference.cache
+C:\Users\pross\source\repos\CDPlayer\CDPlayer\obj\Release\CDPlayer.csproj.CoreCompileInputs.cache
+C:\Users\pross\source\repos\CDPlayer\CDPlayer\obj\Release\CDPlayer.dll
