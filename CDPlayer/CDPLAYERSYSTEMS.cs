@@ -314,7 +314,7 @@ namespace CDplayer
             //Eject
             if (Raycast.GetHit(Eject))
             {
-                if (!RADIOCD && CD)
+                if (CD)
                 {
                     guiUse.Value = true;
                     guiInteraction.Value = InteractionEject;
@@ -623,7 +623,7 @@ namespace CDplayer
                 {
                     foreach(CD cd in CDplayer.CDs)
                     {
-                        if (Vector3.Distance(trigger.position, cd.Part.transform.position) <= 0.05f || Partname == cd.ID)
+                        if (Vector3.Distance(trigger.position, cd.Part.transform.position) <= 0.05f && !cd.Part.transform.IsChildOf(CDplayer.ItemPivot) || Partname == cd.ID)
                         {
                             cd.Part.transform.SetParent(sledpivot, false);
                             cd.Part.transform.localEulerAngles = Vector3.zero;
