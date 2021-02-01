@@ -1,7 +1,11 @@
 ﻿using MSCLoader;
 using UnityEngine;
+using System.Collections;
 using System.Collections.Generic;
 using HutongGames.PlayMaker;
+using System.Linq;
+using System.IO;
+using System;
 
 namespace CDplayer
 {
@@ -10,10 +14,8 @@ namespace CDplayer
         public override string ID => "CDplayerBase"; //Your mod ID (unique)
         public override string Name => "CDplayerBase"; //You mod name
         public override string Author => "BrennFuchS"; //Your Username
-        public override string Version => "1.3"; //Version
+        public override string Version => "1.4"; //Version
 
-        // Set this to true if you will be load custom assets from Assets folder.
-        // This will create subfolder in Assets folder for your mod.
         public override bool UseAssetsFolder => true;
         public override bool SecondPass => true;
 
@@ -29,103 +31,40 @@ namespace CDplayer
             if (PlayMakerGlobals.Instance.Variables.GetFsmGameObject("SongDatabaseCD").Value != null)
             {
                 CDsongdatabase = PlayMakerGlobals.Instance.Variables.GetFsmGameObject("SongDatabaseCD");
-                ModConsole.Print("Got Song Database");
             }
 
-            Transform CDplayerPivotCD;
-            CDplayerPivotCD = GameObject.Find("Database").transform.Find("DatabaseOrders/CD_player").GetComponent<PlayMakerFSM>().FsmVariables.GetFsmGameObject("ThisPart").Value.transform.Find("Sled/cd_sled_pivot");
-
-            if (GameObject.Find("cd(item1)") != null || CDplayerPivotCD.Find("cd(item1)") != null)
+            var CDsInScene = Resources.FindObjectsOfTypeAll<GameObject>().Where(x => x.name.Contains("cd(item"));
+            for (var i = 0; i < CDsInScene.Count(); i++)
             {
-                CD thisCD = null;
+                var thisCD = CDsInScene.ToArray()[i].AddComponent<CD>();
+                var clips = new List<AudioClip>();
 
-                if (GameObject.Find("cd(item1)") != null)
+                switch (thisCD.name)
                 {
-                    thisCD = GameObject.Find("cd(item1)").AddComponent<CD>();
-                }
-                else if(CDplayerPivotCD.Find("cd(item1)") != null)
-                {
-                    thisCD = CDplayerPivotCD.Find("cd(item1)").gameObject.AddComponent<CD>();
-                }
-
-                List<AudioClip> clips = new List<AudioClip>();
-                foreach(AudioClip clip in CDsongdatabase.Value.GetComponents<PlayMakerArrayListProxy>()[0]._arrayList)
-                {
-                    clips.Add(clip);
-                }
-
-                if(thisCD != null)
-                {
-                    thisCD.Clips = clips.ToArray();
-                    thisCD.Part = thisCD.gameObject;
-                    thisCD.ID = 1;
-
-                    CDs.Add(thisCD);
-                }
-
-                ModConsole.Print("CDplayerBase: Got CD1");
-            }
-
-            if (GameObject.Find("cd(item2)") != null || CDplayerPivotCD.Find("cd(item2)") != null)
-            {
-                CD thisCD = null;
-
-                if (GameObject.Find("cd(item2)") != null)
-                {
-                    thisCD = GameObject.Find("cd(item2)").AddComponent<CD>();
-                }
-                else if (CDplayerPivotCD.Find("cd(item2)") != null)
-                {
-                    thisCD = CDplayerPivotCD.Find("cd(item2)").gameObject.AddComponent<CD>();
+                    case "cd(item1)":
+                        clips.AddRange(CDsongdatabase.Value.GetComponents<PlayMakerArrayListProxy>()[0]._arrayList.ToArray().Select(x => (AudioClip)x));
+                        thisCD.Clips = clips.ToArray();
+                        thisCD.Part = thisCD.gameObject;
+                        thisCD.ID = 1;
+                        ModConsole.Print($"CD 1: {clips.Count} Tracks found");
+                        break;
+                    case "cd(item2)":
+                        clips.AddRange(CDsongdatabase.Value.GetComponents<PlayMakerArrayListProxy>()[1]._arrayList.ToArray().Select(x => (AudioClip)x));
+                        thisCD.Clips = clips.ToArray();
+                        thisCD.Part = thisCD.gameObject;
+                        thisCD.ID = 2;
+                        ModConsole.Print($"CD 2: {clips.Count} Tracks found");
+                        break;
+                    case "cd(item3)":
+                        clips.AddRange(CDsongdatabase.Value.GetComponents<PlayMakerArrayListProxy>()[2]._arrayList.ToArray().Select(x => (AudioClip)x));
+                        thisCD.Clips = clips.ToArray();
+                        thisCD.Part = thisCD.gameObject;
+                        thisCD.ID = 3;
+                        ModConsole.Print($"CD 3: {clips.Count} Tracks found");
+                        break;
                 }
 
-                List<AudioClip> clips = new List<AudioClip>();
-                foreach (AudioClip clip in CDsongdatabase.Value.GetComponents<PlayMakerArrayListProxy>()[1]._arrayList)
-                {
-                    clips.Add(clip);
-                }
-
-                if (thisCD != null)
-                {
-                    thisCD.Clips = clips.ToArray();
-                    thisCD.Part = thisCD.gameObject;
-                    thisCD.ID = 2;
-
-                    CDs.Add(thisCD);
-                }
-
-                ModConsole.Print("CDplayerBase: Got CD2");
-            }
-
-            if (GameObject.Find("cd(item3)") != null || CDplayerPivotCD.Find("cd(item3)") != null)
-            {
-                CD thisCD = null;
-
-                if (GameObject.Find("cd(item3)") != null)
-                {
-                    thisCD = GameObject.Find("cd(item3)").AddComponent<CD>();
-                }
-                else if (CDplayerPivotCD.Find("cd(item3)") != null)
-                {
-                    thisCD = CDplayerPivotCD.Find("cd(item3)").gameObject.AddComponent<CD>();
-                }
-
-                List<AudioClip> clips = new List<AudioClip>();
-                foreach (AudioClip clip in CDsongdatabase.Value.GetComponents<PlayMakerArrayListProxy>()[2]._arrayList)
-                {
-                    clips.Add(clip);
-                }
-
-                if (thisCD != null)
-                {
-                    thisCD.Clips = clips.ToArray();
-                    thisCD.Part = thisCD.gameObject;
-                    thisCD.ID = 3;
-
-                    CDs.Add(thisCD);
-                }
-
-                ModConsole.Print("CDplayerBase: Got CD3");
+                CDs.Add(thisCD);
             }
 
             ModConsole.Print($"CDplayerBase: CD List Length = {CDs.Count}");
@@ -151,6 +90,10 @@ namespace CDplayer
             CDPLAYER.transform.eulerAngles = new Vector3(270f, 0f, 0f);
             handler = CDPLAYER.AddComponent<CDHandler>();
             handler.Partname = Partname;
+            var col = CDPLAYER.AddComponent<SphereCollider>();
+            col.radius = 0.1f;
+            col.isTrigger = true;
+            col.center = new Vector3(0f, -0.05f, 0f);
             functions = CDPLAYER.AddComponent<CDPlayerFunctions>();
             functions.RADIOCD = RADIOCD;
             functions.Channel = Channel;
@@ -158,11 +101,11 @@ namespace CDplayer
             CDPLAYER.AddComponent<VolumeKnob>();
             CDPLAYER.transform.SetParent(SelectedVehicle.transform, false);
             CDPLAYER.transform.localEulerAngles = Vector3.zero;
-            if(SelectedVehicle.transform.Find("Radio") != null) SelectedVehicle.transform.Find("Radio").gameObject.SetActive(false);
-            functions.sourcepivot = SelectedVehicle.transform.Find("Speaker");
-            Component.Destroy(functions.sourcepivot.GetComponent<PlayMakerFSM>());
+            if (SelectedVehicle.transform.Find("Radio") != null) SelectedVehicle.transform.Find("Radio").gameObject.SetActive(false);
+            if (SelectedVehicle.transform.Find("Speaker") != null) functions.sourcepivot = SelectedVehicle.transform.Find("Speaker");
+            handler.GetCDfromLastSession();
+            Component.DestroyImmediate(functions.sourcepivot.GetComponent<PlayMakerFSM>());
         }
-
         public static void AddVisualizer(List<Transform> TargetBones, float BoneStandardposition, List<Renderer> TargetRenderers, List<Light> TargetLights)
         {
             functions.audioVisualizer = CDPLAYER.AddComponent<BrennsAudioVisualizer>();

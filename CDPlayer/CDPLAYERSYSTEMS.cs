@@ -3,7 +3,6 @@ using UnityEngine;
 using HutongGames.PlayMaker;
 using System;
 using System.Collections;
-using HutongGames.PlayMaker.Actions;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -58,17 +57,16 @@ namespace CDplayer
                 {
                     KnobState++;
                     knob.localEulerAngles = new Vector3( 0f, -30 * KnobState, 0f);
-                    Functions.LCD.text = Functions.Volume[Mathf.RoundToInt(KnobState)];
                     MasterAudio.PlaySound3DAndForget("CarFoley", transform, variationName: "cd_button");
                     inputDelay = 0.1f;
-                    volumeDelay = 0.1f;
+                    volumeDelay = 0.2f;
                 }
                 else if (KnobState > 0f && Input.GetAxis(mouseWheel) > 0f && inputDelay <= 0f)
                 {
                     KnobState--;
                     knob.localEulerAngles = new Vector3( 0f, -30 * KnobState, 0f);
                     inputDelay = 0.1f;
-                    volumeDelay = 0.1f;
+                    volumeDelay = 0.2f;
                 }
             }
         }
@@ -113,7 +111,6 @@ namespace CDplayer
         public bool ChangedChannel = true;
 
         public bool CD = false;
-        public List<string> Volume = new List<string>();
 
         public VolumeKnob Volumeknob;
         private bool ResetChannelParent = false;
@@ -134,6 +131,8 @@ namespace CDplayer
 
         public BrennsAudioVisualizer audioVisualizer;
 
+        public TimeSpan currentTime;
+
         public void Start()
         {
             Radio = GameObject.Find("RADIO").transform;
@@ -153,47 +152,29 @@ namespace CDplayer
             Volumeknob = GetComponent<VolumeKnob>();
             handler = GetComponent<CDHandler>();
 
-            Volume.Add("");
-            Volume.Add("VOL 01");
-            Volume.Add("VOL 02");
-            Volume.Add("VOL 03");
-            Volume.Add("VOL 04");
-            Volume.Add("VOL 05");
-            Volume.Add("VOL 06");
-            Volume.Add("VOL 07");
-            Volume.Add("VOL 08");
-            Volume.Add("VOL 09");
-            Volume.Add("VOL 10");
-
             GetRadio();
 
             cdAudio.transform.SetParent(sourcepivot, false);
 
-            if (GetComponent<BrennsAudioVisualizer>() != null)
-            {
-                audioVisualizer = GetComponent<BrennsAudioVisualizer>();
-            }
+            if (GetComponent<BrennsAudioVisualizer>() != null) audioVisualizer = GetComponent<BrennsAudioVisualizer>();
         }
 
         public void Update()
         {
             if (waitforreaction)
             {
-                if (handler.AnchorCD != null && Hand.FsmVariables.GetFsmGameObject("PickedObject").Value.name == handler.Part.name)
+                if (handler.AnchorCD != null && Hand.FsmVariables.GetFsmGameObject("PickedObject").Value.name == handler.Part.name) FixedJoint.Destroy(handler.AnchorCD);
+                for (var i = 0; i < CDplayer.CDs.Count; i++)
                 {
-                    FixedJoint.Destroy(handler.AnchorCD);
-                }
+                    CD cd = CDplayer.CDs[i];
 
-                foreach (CD cd in CDplayer.CDs)
-                {
-                    if (handler.AnchorCD == null && handler.Part.gameObject.name == cd.Part.name && Vector3.Distance(handler.trigger.position, cd.Part.transform.position) >= 0.1f)
+                    if (handler.AnchorCD == null && handler.Part.gameObject.name == cd.Part.name)
                     {
                         reactionreceived = true;
                         waitforreaction = false;
                     }
                 }
             }
-
             if (Volumeknob.Volume >= 0.1f)
             {
                 ON = true;
@@ -209,7 +190,6 @@ namespace CDplayer
                 GetComponent<Renderer>().material.SetColor("_EmissionColor", new Color(0f, 0f, 0f, 0f));
                 LCD.text = "";
             }
-
             if (RADIOCD && ON && audioVisualizer != null)
             {
                 if (Channel)
@@ -232,15 +212,10 @@ namespace CDplayer
                     audioVisualizer.source = null;
                 }
             }
-            else if (!ON && audioVisualizer != null)
-            {
-                audioVisualizer.source = null;
-            }
-
-            RadioTuner();
-
+            else if (!ON && audioVisualizer != null) audioVisualizer.source = null;
             if (ON && FoundRadio)
             {
+                RadioTuner();
                 CDPlayer();
                 Buttons();
                 Display();
@@ -336,14 +311,8 @@ namespace CDplayer
             {
                 if (RADIOCD)
                 {
-                    if (Channel)
-                    {
-                        LCD.text = "ALIVIESKAN";
-                    }
-                    else
-                    {
-                        LCD.text = "TOIVERADIO";
-                    }
+                    if (Channel) LCD.text = "ALIVIESKAN";
+                    else LCD.text = "TOIVERADIO";
                 }
                 else
                 {
@@ -351,25 +320,14 @@ namespace CDplayer
                     {
                         displaydelay -= Time.deltaTime;
 
-                        if (displaydelay >= 0.01f)
-                        {
-                            LCD.text = "PLAYING";
-                        }
-                        else if (displaydelay <= 0f)
-                        {
-                            LCD.text = $"TRACK {PlayingTrack + 1}";
-                        }
+                        if (displaydelay >= 0.01f) LCD.text = "PLAYING";
+                        else if (displaydelay <= 0f) LCD.text = $"{PlayingTrack + 1} - {currentTime.Minutes.ToString("00")}:{currentTime.Seconds.ToString("00")}";
                     }
-                    else
-                    {
-                        LCD.text = "NO CD";
-                    }
+                    else LCD.text = "NO CD";
                 }
             }
-            else if (Volumeknob.KnobState > 0f && Volumeknob.volumeDelay >= 0.01f)
-            {
-                LCD.text = Volume[Volumeknob.KnobState];
-            }
+            else if (Volumeknob.KnobState > 0 && Volumeknob.volumeDelay >= 0.01f) LCD.text = $"VOL {(Volumeknob.Volume * 10).ToString("00")}";
+            else if (Volumeknob.KnobState == 0) LCD.text = "";
         }
 
         void RadioTuner()
@@ -397,6 +355,7 @@ namespace CDplayer
                     RadioChannelFSM.FsmVariables.GetFsmBool("OnMuteChannel1").Value = false;
                     RadioChannelFSM.FsmVariables.GetFsmBool("OnMuteFolk").Value = true;
                     ChangedChannel = false;
+                    if (audioVisualizer != null) audioVisualizer.source = Channels.Find("Channel1").GetComponent<AudioSource>();
                 }
                 else if (!Channel && ChangedChannel)
                 {                 
@@ -405,16 +364,10 @@ namespace CDplayer
                     RadioChannelFSM.FsmVariables.GetFsmBool("OnMuteChannel1").Value = true;
                     RadioChannelFSM.FsmVariables.GetFsmBool("OnMuteFolk").Value = false;
                     ChangedChannel = false;
-                    if (audioVisualizer != null)
-                    {
-                        audioVisualizer.source = Channels.Find("Folk").GetComponent<AudioSource>();
-                    }
+                    if (audioVisualizer != null) audioVisualizer.source = Channels.Find("Folk").GetComponent<AudioSource>();
                 }
             }
-            else if (!ON && !ResetChannelParent || !RADIOCD && !ResetChannelParent)
-            {
-                OGChannelParent();
-            }
+            else if (!ON && !ResetChannelParent || !RADIOCD && !ResetChannelParent) OGChannelParent();
         }
 
         void OGChannelParent()
@@ -429,12 +382,7 @@ namespace CDplayer
             if (ON && !RADIOCD && handler.Part != null && CD)
             {
                 cdAudio.volume = Volumeknob.Volume;
-
-                if (audioVisualizer != null)
-                {
-                    audioVisualizer.source = cdAudio;
-                }
-
+                if (audioVisualizer != null) audioVisualizer.source = cdAudio;
                 if (cdAudio.isPlaying == false)
                 {
                     if (CDplayer.CDs.FirstOrDefault(CD => CD.ID == handler.Partname).Part.transform == handler.Part)
@@ -442,7 +390,6 @@ namespace CDplayer
                         if (cdAudio.isPlaying == false)
                         {
                             readytoplay = false;
-
                             if (TrackStoppedAt != 0f && !readytoplay || CDInjected && !readytoplay)
                             {
                                 if (PlayingTrack != CDplayer.CDs.FirstOrDefault(CD => CD.ID == handler.Partname).Clips.Length)
@@ -460,7 +407,6 @@ namespace CDplayer
                                     }
                                 }
                             }
-
                             if (TrackStoppedAt == 0f && !readytoplay && !CDInjected)
                             {
                                 if (PlayingTrack != CDplayer.CDs.FirstOrDefault(CD => CD.ID == handler.Partname).Clips.Length)
@@ -475,7 +421,6 @@ namespace CDplayer
                                 }
                             }
                         }
-
                         if (CDplayer.CDs.FirstOrDefault(CD => CD.ID == handler.Partname).Part.transform == handler.Part)
                         {
                             if (TrackStoppedAt != 0f && readytoplay)
@@ -494,8 +439,8 @@ namespace CDplayer
                         }
                     }
                 }
-            }
-            
+                else currentTime = TimeSpan.FromSeconds(cdAudio.time);
+            }         
             if (!ON || RADIOCD)
             {
                 if(TrackStoppedAt == 0) TrackStoppedAt = cdAudio.time;
@@ -608,38 +553,59 @@ namespace CDplayer
 
         public CDPlayerFunctions functions;
 
-        public void Start()
+        private void Start()
         {
             functions = GetComponent<CDPlayerFunctions>();
             sledpivot = transform.Find("Sled/cd_sled_pivot");
             trigger = transform.Find("trigger_disc");   
         }
 
-        public void Update()
+        public void GetCDfromLastSession()
         {
-            if (cantakeCD)
+            if (Partname != 0)
             {
-                if (trigger.childCount == 0 && functions.ON || Partname != 0)
+                CD cd = CDplayer.CDs.FirstOrDefault(x => x.ID == Partname);
+
+                cd.Part.transform.SetParent(sledpivot, false);
+                cd.Part.transform.localEulerAngles = Vector3.zero;
+                cd.Part.tag = "Untagged";
+                cd.Part.layer = LayerMask.NameToLayer("Default");
+                Part = cd.Part.transform;
+                CDint = cd.ID;
+                StartCoroutine(SledIn());
+            }
+        }
+
+        private void OnTriggerStay(Collider other)
+        {
+            if (cantakeCD && trigger.childCount == 0 && functions.ON)
+            {
+                CD cd = null;
+                if(other.GetComponent<CD>() != null) cd = other.GetComponent<CD>();
+
+                if(other.transform.parent == CDplayer.ItemPivot && Input.GetMouseButtonDown(0))
                 {
-                    foreach(CD cd in CDplayer.CDs)
-                    {
-                        if (Vector3.Distance(trigger.position, cd.Part.transform.position) <= 0.05f && !cd.Part.transform.IsChildOf(CDplayer.ItemPivot) || Partname == cd.ID)
-                        {
-                            cd.Part.transform.SetParent(sledpivot, false);
-                            cd.Part.transform.localEulerAngles = Vector3.zero;
-                            cd.Part.tag = "Untagged";
-                            cd.Part.layer = LayerMask.NameToLayer("Default");
-                            Part = cd.Part.transform;
-                            CDint = cd.ID;
-                            StartCoroutine(SledIn());
-                        }
-                    }
+                    cd.Part.transform.SetParent(sledpivot, false);
+                    cd.Part.transform.localEulerAngles = Vector3.zero;
+                    cd.Part.tag = "Untagged";
+                    cd.Part.layer = LayerMask.NameToLayer("Default");
+                    Part = cd.Part.transform;
+                    CDint = cd.ID;
+                    StartCoroutine(SledIn());
                 }
             }
+        }
 
-            if (functions.reactionreceived)
+        private void Update()
+        {
+            if (functions.reactionreceived) Clearvalues();
+            else
             {
-                Clearvalues();
+                if (Part.gameObject != null && Part.parent != sledpivot)
+                {
+                    Part.SetParent(sledpivot, false);
+                    Part.gameObject.SetActive(false);
+                }
             }
         }
 
