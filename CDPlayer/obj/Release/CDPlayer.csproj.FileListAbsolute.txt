@@ -1,5 +1,8 @@
 C:\Users\pross\source\repos\CDPlayer\CDPlayer\bin\Release\CDPlayer.dll
 C:\Users\pross\source\repos\CDPlayer\CDPlayer\obj\Release\CDPlayer.csproj.CoreCompileInputs.cache
-C:\Users\pross\source\repos\CDPlayer\CDPlayer\obj\Release\CDPlayer.dll
 C:\Users\pross\source\repos\CDPlayer\CDPlayer\obj\Release\CDPlayer.csprojAssemblyReference.cache
+C:\Users\pross\source\repos\CDPlayer\CDPlayer\obj\Release\CDplayer.Properties.Resources.resources
+C:\Users\pross\source\repos\CDPlayer\CDPlayer\obj\Release\CDPlayer.csproj.GenerateResource.cache
+C:\Users\pross\Documents\MySummerCar\Mods\CDplayerBase.dll
 C:\Users\pross\Documents\MySummerCar\Mods\CDPlayer.dll
+C:\Users\pross\source\repos\CDPlayer\CDPlayer\obj\Release\CDPlayer.dll

@@ -3,7 +3,6 @@ using System.IO;
 using MSCLoader;
 using AudioLibrary;
 using UnityEngine;
-using HutongGames.PlayMaker;
 
 namespace CDplayer
 {
@@ -11,8 +10,6 @@ namespace CDplayer
     {
 		public static AudioClip LoadAudioFromFile(string path, bool doStream, bool background)
 		{
-			ModConsole.Print(path);
-
 			Stream dataStream = new MemoryStream(File.ReadAllBytes(path));
 			AudioFormat audioFormat = Manager.GetAudioFormat(path);
 			string fileName = Path.GetFileName(path);

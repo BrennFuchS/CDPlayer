@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using HutongGames.PlayMaker;
 using System.Linq;
 using System.IO;
-using System;
 
 namespace CDplayer
 {
@@ -14,18 +13,70 @@ namespace CDplayer
         public override string ID => "CDplayerBase"; //Your mod ID (unique)
         public override string Name => "CDplayerBase"; //You mod name
         public override string Author => "BrennFuchS"; //Your Username
-        public override string Version => "1.4"; //Version
+        public override string Version => "1.6"; //Version
 
-        public override bool UseAssetsFolder => true;
+        public override bool UseAssetsFolder => false;
         public override bool SecondPass => true;
 
         public static List<CD> CDs = new List<CD>();
         public FsmGameObject CDsongdatabase;
         public static Transform ItemPivot;
 
+        static Settings otherAudioAutomaticImports = new Settings("oAAI", "other Audio Automatic Importing", false);
+        static Settings importAudioFiles = new Settings("iAF", "Import Audio Files!", DoImport);
+
+        public override void ModSettingsLoaded()
+        {
+            if ((bool)otherAudioAutomaticImports.GetValue()) DoImport();
+        }
+
+        static void DoImport()
+        {
+            if (ModLoader.GetCurrentScene() == CurrentScene.MainMenu) ImportAll();
+            else ModConsole.Error("CDplayerBase: Importing Audio only works in the MainMenu!");
+        }
+
+        static void ImportAll()
+        {
+            GameObject.Find("Interface").transform.Find("Songs/button").gameObject.SetActive(false);
+
+            var radio = GameObject.Find("Radio");
+            var mainPath = Path.GetFullPath(".") + "\\";
+            var CD = radio.transform.Find("CD").GetComponent<PlayMakerFSM>();
+
+            radio.transform.Find("Folk").GetComponents<PlayMakerFSM>()[1].FsmVariables.GetFsmString("Path").Value = "RADIO IMPORTED";
+
+            var text = GameObject.Find("Interface").transform.Find("Songs/Text").GetComponentsInChildren<TextMesh>();
+            text[0].text = "CDplayerBase AUTO IMPORT STATUS:";
+            text[1].text = "CDplayerBase AUTO IMPORT STATUS:";
+
+            ImportAt(radio.transform.Find("Folk").GetComponents<PlayMakerArrayListProxy>()[0], mainPath + "Radio\\");
+            CD.FsmVariables.GetFsmBool("CD1").Value = ImportAt(radio.transform.Find("CD").GetComponents<PlayMakerArrayListProxy>()[0], mainPath + "CD1\\");
+            CD.FsmVariables.GetFsmBool("CD2").Value = ImportAt(radio.transform.Find("CD").GetComponents<PlayMakerArrayListProxy>()[1], mainPath + "CD2\\");
+            CD.FsmVariables.GetFsmBool("CD3").Value = ImportAt(radio.transform.Find("CD").GetComponents<PlayMakerArrayListProxy>()[2], mainPath + "CD3\\");
+
+            CD.FsmVariables.GetFsmBool("Import").Value = false;
+        }
+        static bool ImportAt(PlayMakerArrayListProxy proxy, string mainPath)
+        {
+            var paths = Directory.GetFiles(mainPath).Where(x => !x.Contains(".png"));
+
+            if (paths.Count() <= 0) return false;
+            else
+            {
+                var audios = new List<AudioClip>();
+                if (proxy.preFillAudioClipList.Count > 0) proxy.preFillAudioClipList.Clear();
+                for (var i = 0; i < paths.Count(); i++) audios.Add(AudioImport.LoadAudioFromFile(paths.ToArray()[i], true, true));
+                for (var i = 0; i < audios.Count(); i++) proxy.preFillAudioClipList.Add(audios[i]);
+                proxy._arrayList = new ArrayList(audios.Count());
+                proxy._arrayList.AddRange(proxy.preFillAudioClipList);
+                return true;
+            }
+        }
+
         public override void OnLoad()
         {
-            CREATORSYSTEM.assetBundle = LoadAssets.LoadBundle(this, "cdplayer");
+            CREATORSYSTEM.assetBundle = AssetBundle.CreateFromMemoryImmediate(Properties.Resources.cdplayer);
             ItemPivot = GameObject.Find("PLAYER").transform.Find("Pivot/AnimPivot/Camera/FPSCamera/1Hand_Assemble/ItemPivot");
 
             if (PlayMakerGlobals.Instance.Variables.GetFsmGameObject("SongDatabaseCD").Value != null)
@@ -68,6 +119,12 @@ namespace CDplayer
             }
 
             ModConsole.Print($"CDplayerBase: CD List Length = {CDs.Count}");
+        }
+
+        public override void ModSettings()
+        {
+            Settings.AddCheckBox(this, otherAudioAutomaticImports);
+            Settings.AddButton(this, importAudioFiles);
         }
 
         public override void SecondPassOnLoad()
