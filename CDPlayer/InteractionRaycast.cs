@@ -4,6 +4,7 @@ using System.Linq;
 
 namespace CDplayer
 {
+    //this component isn't covered by the MIT license
     public class InteractionRaycast : MonoBehaviour
     {
         public RaycastHit hitInfo;
